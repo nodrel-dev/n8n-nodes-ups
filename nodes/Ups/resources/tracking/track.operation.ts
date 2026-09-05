@@ -1,16 +1,44 @@
-import type {
-	IExecuteSingleFunctions,
-	IN8nHttpFullResponse,
-	INodeExecutionData,
-	INodeProperties,
+import {
+	NodeOperationError,
+	type IExecuteSingleFunctions,
+	type IHttpRequestOptions,
+	type IN8nHttpFullResponse,
+	type INodeExecutionData,
+	type INodeProperties,
 } from 'n8n-workflow';
 import { mapTrackStatus, type TrackDetail } from '../../core/mapTrackStatus';
 import { mapUpsError } from '../../core/mapUpsError';
+import { sanitizeTrackingNumber } from '../../core/sanitizeTrackingNumber';
 
 const showOnlyForTrack = {
 	operation: ['track'],
 	resource: ['tracking'],
 };
+
+// preSend enforces the URL-path boundary BEFORE any UPS call. Track is the only operation that
+// interpolates a user value into the path, so an inquiry number arriving from untrusted input (a
+// webhook, an AI-Agent tool call) must not be able to carry `..`, `?`, or `#` and retarget the
+// authenticated request at another UPS endpoint. The url is REBUILT from the sanitized value
+// rather than merely validated, so the guard stays authoritative even if the routing template
+// above is edited later. Like the other preSends we throw NodeOperationError — a pre-call boundary
+// failure, which n8n rewraps with httpCode='none' to distinguish it from a real UPS HTTP error.
+async function trackPreSend(
+	this: IExecuteSingleFunctions,
+	requestOptions: IHttpRequestOptions,
+): Promise<IHttpRequestOptions> {
+	const raw = this.getNodeParameter('trackingNumber', '') as unknown;
+	const trackingNumber = sanitizeTrackingNumber(raw);
+
+	if (trackingNumber === null) {
+		throw new NodeOperationError(this.getNode(), 'Invalid UPS tracking number.', {
+			description:
+				'A UPS inquiry number is letters and digits only (for example 1Z9999999999999999), up to 35 characters. Remove any spaces, slashes, or punctuation — and if this value comes from an earlier node, check it is the tracking number and not a URL or a whole record.',
+		});
+	}
+
+	requestOptions.url = `/track/v1/details/${trackingNumber}`;
+	return requestOptions;
+}
 
 // postReceive runs on EVERY response because the request sets `ignoreHttpStatusErrors: true`
 // (ADR-0004). On non-2xx we hand the body to the shared mapUpsError (surfaces UPS code/message
@@ -88,6 +116,9 @@ export const trackOperationOption = {
 				transactionSrc: 'n8n-nodes-ups',
 			},
 			ignoreHttpStatusErrors: true,
+		},
+		send: {
+			preSend: [trackPreSend],
 		},
 		output: {
 			postReceive: [trackPostReceive],
