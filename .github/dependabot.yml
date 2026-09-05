@@ -1,0 +1,48 @@
+# Dependency update automation.
+#
+# This repo ships ZERO runtime dependencies (constitution Principle 2) — the published tarball is
+# LICENSE + README + dist only — so everything below is the dev/CI toolchain. That is exactly why
+# it needs watching: a toolchain advisory never reaches an end user, but it does sit in the merge
+# gate, and without alerting it drifts silently (a 16-high, 11-minor drift on @n8n/node-cli went
+# unnoticed for weeks before this file existed).
+#
+# Grouped into ONE PR per ecosystem per week, on purpose: this repo's rule is one workflow per
+# concern and a red CI meaning exactly one thing. A dozen individual bump PRs each firing the full
+# lint/test/build/pack gate is noise, not signal.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      # Conventional commits drive release-please's changelog and version bump. Dev-dependency
+      # bumps are `chore` so they never cut a release on their own; a security fix that matters
+      # to users should be a hand-written `fix` commit instead.
+      prefix: chore
+      include: scope
+    groups:
+      dev-dependencies:
+        patterns: ['*']
+    ignore:
+      # n8n-workflow is a PEER dependency: the installed n8n decides the real version at runtime,
+      # so bumping our dev copy tracks n8n's release train rather than fixing anything for users.
+      # Majors are a deliberate, tested migration — never an automated PR.
+      - dependency-name: n8n-workflow
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions:
+        patterns: ['*']
