@@ -42,6 +42,22 @@ updates:
       # Majors are a deliberate, tested migration — never an automated PR.
       - dependency-name: n8n-workflow
         update-types: ['version-update:semver-major']
+      # eslint and typescript are pinned to EXACT versions here and peer-constrained by
+      # @n8n/node-cli (which pins eslint 9.29.0). Their majors cannot land until the n8n
+      # toolchain moves first — eslint 10 kills `n8n-node lint` outright with
+      # "Cannot read properties of undefined (reading 'Cjs')" inside @typescript-eslint,
+      # and TypeScript 7 fails the same gate. Reopening these weekly is pure noise; bump
+      # them deliberately when @n8n/node-cli supports it.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # @types/node must track the LOWEST supported runtime, not the newest release. The
+      # engine floor here is Node >= 22.22 and CI pins Node 24, so @types/node 26 would
+      # happily type APIs that do not exist on a supported runtime — green types, broken
+      # at run time. Move this only when the Node floor moves.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: '/'
@@ -59,3 +75,12 @@ updates:
       github-actions:
         patterns: ['*']
         update-types: ['minor', 'patch']
+    ignore:
+      # The release action drives the workflow that PUBLISHES to npm, and ci.yml never
+      # exercises that workflow — a green check on such a bump proves nothing about
+      # releasing, while a regression breaks releases silently. gotchas §7 records how
+      # sensitive this setup is to release-please config-mode changes (manifest vs
+      # config-less already deadlocked a release once). Majors here are reviewed and
+      # verified against an actual release, never merged on CI colour.
+      - dependency-name: googleapis/release-please-action
+        update-types: ['version-update:semver-major']
