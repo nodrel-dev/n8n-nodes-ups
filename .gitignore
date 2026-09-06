@@ -161,3 +161,9 @@ vite.config.ts.timestamp-*
 # --- added by n8n-node-scaffold ---
 .env.local
 *.tgz
+.DS_Store
+
+# Third-party reference clones kept in the working tree. `awesome-ux-skills` is a clone of
+# github.com/tommyjepsen/awesome-ux-skills with its own .git — unrelated to this node, and
+# committing it would either create a broken submodule gitlink or vendor someone else's repo.
+/awesome-ux-skills/
