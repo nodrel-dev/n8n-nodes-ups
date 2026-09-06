@@ -25,8 +25,17 @@ updates:
       prefix: chore
       include: scope
     groups:
+      # Minor and patch ONLY. Majors are deliberately excluded so they arrive as their own
+      # PRs and can be judged one at a time. Grouping majors in produced an unmergeable blob:
+      # a single PR carrying eslint 9->10, TypeScript 5->7, @types/node 22->26 and vitest 3->4
+      # failed CI outright (`n8n-node lint` died with "Cannot read properties of undefined
+      # (reading 'Cjs')" inside @typescript-eslint), and nothing in it could land because the
+      # whole group moves together. eslint and typescript are also pinned to exact versions
+      # here and peer-constrained by @n8n/node-cli, so their majors need the toolchain to move
+      # first — never an automatic merge.
       dev-dependencies:
         patterns: ['*']
+        update-types: ['minor', 'patch']
     ignore:
       # n8n-workflow is a PEER dependency: the installed n8n decides the real version at runtime,
       # so bumping our dev copy tracks n8n's release train rather than fixing anything for users.
@@ -44,5 +53,9 @@ updates:
       prefix: ci
       include: scope
     groups:
+      # Same split as npm, and it matters more here: a major on the release action changes the
+      # workflow that publishes to npm, and CI never exercises that workflow — a green check on
+      # such a PR proves nothing about releasing. Majors come separately so they get read.
       github-actions:
         patterns: ['*']
+        update-types: ['minor', 'patch']
