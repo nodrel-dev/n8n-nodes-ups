@@ -275,3 +275,72 @@ be replaced) or an *identifier* (a literal key something else already stores und
 Safe migration if you want them gone: rename the keys in `.env.local` to `UPS_CLIENT_ID` /
 `UPS_CLIENT_SECRET` / `UPS_ENV` first (the fallback already supports them), confirm the harness
 still seeds a working credential, and only then delete the `__SERVICE__` reads from the script.
+
+## §17 — The harness dies on `isolated-vm` because npm auto-installs your PEER deps (verified 2026-09-05)
+
+`./scripts/harness-up.sh up` pulled the image, started the container, then died before n8n came
+up. The only visible symptom was a misleading `Error response from daemon: container ... is not
+running` from the *next* `docker exec`, and an EMPTY `docker logs`.
+
+The real error was inside the container:
+
+```
+gyp ERR! find Python  Could not find any Python installation to use
+cwd /home/node/.n8n/nodes/node_modules/isolated-vm
+node -v v26.5.1
+```
+
+**Why a zero-runtime-dependency package installs a native module.** `package.json` declares
+`peerDependencies: { "n8n-workflow": "*" }`, and **npm 7+ auto-installs peer dependencies**. So
+`npm install /tmp/pkg.tgz` into `/home/node/.n8n/nodes` pulls a SECOND copy of `n8n-workflow`,
+which depends on `@n8n/expression-runtime`, which depends on `isolated-vm` — a native module. The
+n8n image now runs **Node 26**, `isolated-vm` ships no prebuild for it (linux/arm64), and the slim
+n8n image has no Python, so node-gyp falls back to a source compile and fails.
+
+Zero runtime dependencies does NOT mean zero installed packages. A peer dep is still an install.
+
+**Fix: `npm install --omit=peer`.** Verified: `added 1 package in 2s`, no native build. It is also
+the more faithful setup — a community node installed into n8n gets `n8n-workflow` from n8n itself
+at runtime, so installing a private copy was never right. Do not "tidy away" this flag.
+
+**Prove pre-existing before you debug your own diff.** The instinct is to blame the change in
+flight. Installing the ALREADY-PUBLISHED previous version into the same image reproduced the
+failure identically, which proved in one command that the image had moved and the code had not.
+Do this first; it is cheap and it redirects the entire investigation.
+
+**Never redirect an install log inside a container you then `&&` off.** The old line was
+`npm install ... >/tmp/inst.log 2>&1 && ... n8n start`. On failure the log stayed inside a dead
+container, `docker logs` was empty, and the true error surfaced only as an unrelated-looking
+message from a later command. Print the log and exit loudly instead — this is most of the reason
+a one-flag problem took a long diagnosis.
+
+## §18 — Enabling Dependabot opens a PR per outstanding advisory, immediately (verified 2026-09-05)
+
+Turning on Dependabot **security updates** (`PUT /repos/{owner}/{repo}/automated-security-fixes`)
+does not start watching from that moment — it drains the existing backlog at once. Five PRs landed
+within 30 seconds of enabling it here, one per outstanding advisory, all of which were already
+fixed by a dependency bump in flight.
+
+Land `.github/dependabot.yml` with your **grouping** config FIRST, then enable. Dependabot reads
+that file from the **default branch**, so a grouping config sitting in an unmerged PR does nothing
+— exactly the `pull_request_target` base-branch behaviour in §15, for the same reason. With
+grouping live, updates arrive as one PR per ecosystem per week instead of one per advisory
+(confirmed: the next cycle produced two grouped PRs covering 12 updates).
+
+Also note the two settings are separate: `vulnerability-alerts` (alerting) and
+`automated-security-fixes` (PRs). The `/dependabot/alerts` endpoint returns **403 "Dependabot
+alerts are disabled"** when alerting is off, and says nothing about whether version updates are
+configured. Enabling either needs repo **admin**; a token without it gets a **404**, not a 403,
+which reads like a wrong URL rather than a permission problem.
+
+## §19 — `cd` inside a tool call persists; use absolute paths near a nested repo (verified 2026-09-05)
+
+This repo contains a SECOND git repo at `internal/` (the private companion). A shell `cd internal`
+in one command persists into every later command in the same session, so a subsequent
+`cat >> docs/n8n-gotchas.md` silently created `internal/docs/n8n-gotchas.md` instead of appending
+to the real one. The tell was alarming and misleading: `git log -- docs/` showed no history and
+`git ls-tree HEAD docs/` was empty, which reads exactly like "tracked files were deleted."
+
+Nothing was lost — it was the wrong repo, not a damaged one. When two repos are nested, prefer
+absolute paths for writes, and confirm with `pwd` + `git remote get-url origin` before concluding
+that files have gone missing.
