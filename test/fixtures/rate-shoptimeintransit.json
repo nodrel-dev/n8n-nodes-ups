@@ -6,7 +6,7 @@
 		},
 		"RatedShipment": [
 			{
-				"Service": { "Code": "03", "Description": "UPS Ground" },
+				"Service": { "Code": "03", "Description": "" },
 				"BillingWeight": { "UnitOfMeasurement": { "Code": "LBS" }, "Weight": "10" },
 				"TransportationCharges": { "CurrencyCode": "USD", "MonetaryValue": "12.50" },
 				"TotalCharges": { "CurrencyCode": "USD", "MonetaryValue": "12.50" },
@@ -15,7 +15,7 @@
 				"RatedShipmentAlert": [{ "Code": "110971", "Description": "Ground saver eligible" }]
 			},
 			{
-				"Service": { "Code": "02", "Description": "UPS 2nd Day Air" },
+				"Service": { "Code": "02", "Description": "" },
 				"BillingWeight": { "UnitOfMeasurement": { "Code": "LBS" }, "Weight": "10" },
 				"TotalCharges": { "CurrencyCode": "USD", "MonetaryValue": "28.40" },
 				"NegotiatedRateCharges": { "TotalCharge": { "CurrencyCode": "USD", "MonetaryValue": "24.00" } },

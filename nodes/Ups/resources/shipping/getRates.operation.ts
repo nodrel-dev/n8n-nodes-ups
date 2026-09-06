@@ -90,7 +90,15 @@ async function ratesPostReceive(
 	if (response.statusCode >= 400) {
 		mapUpsError(this.getNode(), response.body, response.statusCode);
 	}
-	const lines = flattenRates(response.body as object, { wantTransit: true });
+	// Resolve the Effective Origin the same way the preSend did, so the service names are keyed on
+	// the country the shipment actually leaves from (issue #44). UPS returns an EMPTY
+	// Service.Description and the same code names different products per origin — `01` is Next Day
+	// Air from the US but Express from Canada — so guessing here would confidently mislabel rates.
+	const get: ParamGetter = (name, fallback) => this.getNodeParameter(name, fallback as never);
+	const profile = await loadShipperProfile(this);
+	const originCountry = resolveShipmentParties(get, profile).effectiveShipFrom.countryCode ?? '';
+
+	const lines = flattenRates(response.body as object, { wantTransit: true, originCountry });
 	return lines.map((line) => ({ json: line as unknown as INodeExecutionData['json'] }));
 }
 
