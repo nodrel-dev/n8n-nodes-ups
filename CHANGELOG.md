@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.2](https://github.com/nodrel-dev/n8n-ups-node/compare/v0.7.1...v0.7.2) (2026-09-06)
+
+
+### Bug Fixes
+
+* **harness:** install the node without peer deps so the container boots ([#43](https://github.com/nodrel-dev/n8n-ups-node/issues/43)) ([ae195bb](https://github.com/nodrel-dev/n8n-ups-node/commit/ae195bbdbf80d2f7638a6f6e82e9979a221af554))
+* **track:** reject non-alphanumeric inquiry numbers before the UPS call ([#38](https://github.com/nodrel-dev/n8n-ups-node/issues/38)) ([ae4dcb0](https://github.com/nodrel-dev/n8n-ups-node/commit/ae4dcb0d04f55c69319909bfb33e2e8f026b1539))
+
 ## [0.7.1](https://github.com/nodrel-dev/n8n-ups-node/compare/v0.7.0...v0.7.1) (2026-08-16)
 
 
