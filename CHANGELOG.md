@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/nodrel-dev/n8n-ups-node/compare/v0.7.2...v0.7.3) (2026-09-06)
+
+
+### Bug Fixes
+
+* **rates:** resolve service names locally instead of emitting empty strings ([#58](https://github.com/nodrel-dev/n8n-ups-node/issues/58)) ([169f98f](https://github.com/nodrel-dev/n8n-ups-node/commit/169f98fecf3944c9cbe4cea0e2654a0dc148f3df))
+
 ## [0.7.2](https://github.com/nodrel-dev/n8n-ups-node/compare/v0.7.1...v0.7.2) (2026-09-06)
 
 
