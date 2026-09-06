@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'   # all GH Actions pin Node 24 (satisfies n8n-node's >= 22.22 floor)
           cache: 'npm'
