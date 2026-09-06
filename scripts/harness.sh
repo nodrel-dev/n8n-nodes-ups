@@ -34,7 +34,7 @@ docker run --rm -it \
   -v "$(pwd)/$TARBALL:/tmp/$TARBALL" \
   --entrypoint /bin/sh \
   docker.n8n.io/n8nio/n8n \
-  -c "mkdir -p /home/node/.n8n/nodes && cd /home/node/.n8n/nodes && npm install /tmp/$TARBALL && cd /home/node/.n8n && n8n start"
+  -c "mkdir -p /home/node/.n8n/nodes && cd /home/node/.n8n/nodes && npm install --omit=peer /tmp/$TARBALL && cd /home/node/.n8n && n8n start"
 
 # For --ci: install the tarball, import test/workflows/*.json, then
 # `n8n execute --id <id>` each and assert on output. Wire to your fixtures.
