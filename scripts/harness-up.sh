@@ -108,6 +108,14 @@ JSON
     ' "$f" "$STAGE/$base.json" "$CRED_ID" "ups-$base"
   done
 
+  # `--omit=peer` is LOAD-BEARING. Our package.json declares `peerDependencies: n8n-workflow: "*"`,
+  # and npm auto-installs peers — so a plain `npm install` here pulls a SECOND copy of n8n-workflow
+  # into /home/node/.n8n/nodes, which drags in @n8n/expression-runtime -> isolated-vm, a native
+  # module. The n8n image now runs Node 26, isolated-vm ships no prebuild for it, and the slim image
+  # has no Python, so node-gyp fails and the container dies before n8n ever starts (verified
+  # 2026-09-05: the published 0.7.1 fails identically, so this is the image moving, not our code).
+  # Omitting peers is also what actually happens in a real install: n8n provides n8n-workflow at
+  # runtime. Do not drop this flag.
   echo "==> (Re)starting $CONTAINER on :$PORT"
   docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
   docker run -d --name "$CONTAINER" \
@@ -120,7 +128,7 @@ JSON
     -v "$(pwd)/$STAGE:/stage" \
     --entrypoint /bin/sh \
     "$IMAGE" \
-    -c "mkdir -p /home/node/.n8n/nodes && cd /home/node/.n8n/nodes && npm install /tmp/pkg.tgz >/tmp/inst.log 2>&1 && cd /home/node/.n8n && n8n start" \
+    -c "mkdir -p /home/node/.n8n/nodes && cd /home/node/.n8n/nodes && { npm install --omit=peer /tmp/pkg.tgz >/tmp/inst.log 2>&1 || { echo '=== npm install FAILED ==='; cat /tmp/inst.log; exit 1; }; } && cd /home/node/.n8n && n8n start" \
     >/dev/null
   echo "    container started; installing node + booting n8n…"
 
