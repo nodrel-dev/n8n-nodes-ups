@@ -11,6 +11,29 @@ describe('flattenRates', () => {
 		expect(lines[0].serviceName).toBe('UPS Ground');
 	});
 
+	// Issue #44. UPS sends `Service.Description: ""` (verified live against CIE), so the name is
+	// resolved from the code. The fixture now carries that empty string, which means the assertion
+	// above is genuinely exercising the lookup rather than echoing a fabricated fixture value.
+	it('never emits an empty service name, even though UPS sends an empty Description', () => {
+		const lines = flattenRates(fixture, { wantTransit: true });
+		expect(fixture.RateResponse.RatedShipment[0].Service.Description).toBe('');
+		for (const line of lines) {
+			expect(line.serviceName).not.toBe('');
+		}
+	});
+
+	it('names services for the ORIGIN country, not a single hardcoded market', () => {
+		// The same code is a different product per origin: 02 is 2nd Day Air from the US but
+		// Expedited from Canada. Getting this wrong would confidently mislabel every rate for a
+		// Canadian shipper — including this project's own Canada-registered CIE account.
+		const us = flattenRates(fixture, { wantTransit: true, originCountry: 'US' });
+		const ca = flattenRates(fixture, { wantTransit: true, originCountry: 'CA' });
+		expect(us[1].serviceCode).toBe('02');
+		expect(ca[1].serviceCode).toBe('02');
+		expect(us[1].serviceName).toBe('UPS 2nd Day Air');
+		expect(ca[1].serviceName).toBe('UPS Expedited');
+	});
+
 	it('maps published (never null) and negotiated (nullable) via the shared money shape', () => {
 		const [ground] = flattenRates(fixture, { wantTransit: true });
 		expect(ground.published).toEqual({ amount: '12.50', currency: 'USD' });

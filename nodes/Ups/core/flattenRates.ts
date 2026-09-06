@@ -1,5 +1,6 @@
 import type { RateLine } from './types';
 import { toMoney, type UpsCharge } from './toMoney';
+import { serviceName } from './serviceName';
 
 // Pure core: flatten the UPS rate response into RateLine[] — one per service (the operation fans
 // these out, one output item per service). Published is never null; Negotiated is nullable via the
@@ -48,7 +49,11 @@ function parseTransitDays(value: string | undefined): number | null {
 
 export function flattenRates(
 	response: RateResponse,
-	options: { wantTransit: boolean },
+	// `originCountry` is the Effective Origin (ShipFrom else Shipper). UPS sends an EMPTY
+	// Service.Description, and the same code names different products per origin, so the name is
+	// resolved locally and must be keyed on the same origin that decides international
+	// classification (issue #44, ADR-0003). Defaulted so existing callers keep compiling.
+	options: { wantTransit: boolean; originCountry?: string },
 ): RateLine[] {
 	const rate = response.RateResponse;
 	const shipments = toArray(rate?.RatedShipment);
@@ -57,7 +62,11 @@ export function flattenRates(
 		const published = toMoney(shipment.TotalCharges) ?? { amount: '0', currency: 'USD' };
 		return {
 			serviceCode: shipment.Service?.Code ?? '',
-			serviceName: shipment.Service?.Description ?? '',
+			serviceName: serviceName(
+				shipment.Service?.Code ?? '',
+				options.originCountry ?? '',
+				shipment.Service?.Description,
+			),
 			negotiated: toMoney(shipment.NegotiatedRateCharges?.TotalCharge),
 			published,
 			billingWeight: shipment.BillingWeight?.Weight ?? null,
