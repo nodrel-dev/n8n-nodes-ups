@@ -264,6 +264,29 @@ npm run build    # compile to dist/
 npm run dev      # run locally inside n8n (Node.js >= 22.22)
 ```
 
+### End-to-end harness
+
+Unit tests cover the pure transform cores; the operations themselves are verified against the
+UPS Customer Integration Environment (CIE) in a real n8n container:
+
+```bash
+./scripts/harness-up.sh up    # build, boot n8n in Docker, seed the credential, import workflows
+./scripts/harness-up.sh run   # execute gates 1-4b headlessly and print each result
+./scripts/harness-up.sh down  # tear it down
+```
+
+`up` reads your UPS client id/secret from a gitignored `.env.local`. Gate 5 is the AI-Agent
+**tool** path — it needs an Anthropic credential and the chat UI, so it is run from the browser
+rather than headlessly.
+
+### Dependencies and security
+
+The package ships **zero runtime dependencies**, so the production tree is empty and the
+published tarball is `LICENSE` + `README` + `dist` only. Everything in `npm audit` is therefore
+dev-toolchain and never reaches an installed node. Dependabot alerts and grouped weekly updates
+are enabled; advisories that remain are inside `@n8n/node-cli`'s own dependency tree and clear
+when it releases.
+
 Releases are driven by [release-please](https://github.com/googleapis/release-please): merge the auto-generated release PR on `main` and the workflow tags, publishes to npm with provenance, and scans. Never run a release or `npm publish` locally.
 
 ## Resources
